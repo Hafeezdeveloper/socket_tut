@@ -10,16 +10,12 @@ Studentrouter.get("/tweet/:from/oneuser/user/:userid", async (req, res) => {
         let fromId = req.params.from    
         console.log(fromId, "from")
         console.log(userid , "userId")
-        let result = await conversationModel.find({
-            $or:[
-                {
-                to:userid
-                },
-                {
-                from: fromId 
-                },
-                ]   
-    }).populate({   
+        const result = await conversationModel.find({
+            $or: [
+              { from: userid , to :fromId },
+              { to: userid , from:  fromId}
+            ]
+          }).populate({   
         path: "to from",
         select: "name email"
     }).sort({_id : -1   })
@@ -56,30 +52,32 @@ Studentrouter.get("/tweet/user", async (req, res) => {
 
 
 
-// Studentrouter.post("/userMessage/send", async (req, res) => {
-//     let {from, to, message} = req.body
-//     let obj =  {from, to, message}
-//     try {
-//         let result = conversationModel(obj) 
-//         await result.save()
-//         if(!result){
-//             res.send(sendResponse("false",null , "Data not Send" , "error")).status(404)
-//         }else{
-//         // After saving the message to the database
-// const io = getIO(); // make sure this function properly returns the io instance
-// if(io) { // Always check if 'io' is not null
-//     io.emit(`${to}-${from}`, result);
-// } else {
-//     // Handle the case where io is not initialized
-//     console.log("Socket.io is not initialized");
-//     res.status(500).send(sendResponse(false,null , "Error occurred", "error"));
-// }
-//         }
-//     } catch (e) {
-//         console.log(e)
-//         res.status(500).send(sendResponse(false,null , "Error occurred", "error"));
-//     }
-// });
+Studentrouter.post("/api/userMessage/send", async (req, res) => {
+    let {from, to, message} = req.body
+    let obj =  {from, to, message}
+    try {
+        console.log("api ok h ")
+        let result = conversationModel(obj) 
+        await result.save()
+        if(!result){
+            res.send(sendResponse("false",null , "Data not Send" , "error")).status(404)
+        }else{
+            let senMesage = await conversationModel.findById(result._id)
+            .populate({   
+                path: "to from",
+                select: "name email"
+            })
+
+            let io = getIO()
+            io.emit(`${req.body.to}-${req.body.from}`, senMesage);
+            res.status(200).send(sendResponse(false, senMesage, null ,  "succ"));
+        }
+    } catch (e) {
+        console.log(e)
+        res.status(500).send(sendResponse(false,null , "Error occurred", "error"));
+    }
+})
+
 
 
 
